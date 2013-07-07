@@ -12,38 +12,32 @@ import (
 )
 
 type MultiHashContext struct {
-  adler32 hash.Hash
-  crc32 hash.Hash
-  md5 hash.Hash
-  sha1 hash.Hash
-  sha256 hash.Hash
+  contexts map[string]hash.Hash
 }
 
 func New() MultiHashContext {
-  return MultiHashContext{
-    adler32: adler32.New(),
-    crc32: crc32.NewIEEE(),
-    md5: md5.New(),
-    sha1: sha1.New(),
-    sha256: sha256.New() }
+  contexts := make(map[string]hash.Hash)
+  contexts["adler32"] = adler32.New()
+  contexts["crc32"] = crc32.NewIEEE()
+  contexts["md5"] = md5.New()
+  contexts["sha1"] = sha1.New()
+  contexts["sha256"] = sha256.New()
+  return MultiHashContext{ contexts: contexts }
 }
 
 func (h *MultiHashContext) Writer() io.Writer {
-  return io.MultiWriter(
-    h.adler32,
-    h.crc32,
-    h.md5,
-    h.sha1,
-    h.sha256)
+  var elements []io.Writer
+  for _, v := range h.contexts {
+    elements = append(elements, v)
+  }
+  return io.MultiWriter(elements...)
 }
 
 func (h *MultiHashContext) Result() map[string]string {
   result := make(map[string]string)
-  result["adler32"] = fmt.Sprintf("%x", h.adler32.Sum(nil))
-  result["crc32"] = fmt.Sprintf("%x", h.crc32.Sum(nil))
-  result["md5"] = fmt.Sprintf("%x", h.md5.Sum(nil))
-  result["sha1"] = fmt.Sprintf("%x", h.sha1.Sum(nil))
-  result["sha256"] = fmt.Sprintf("%x", h.sha256.Sum(nil))
+  for k, v := range h.contexts {
+    result[k] = fmt.Sprintf("%x", v.Sum(nil))
+  }
   return result
 }
 
