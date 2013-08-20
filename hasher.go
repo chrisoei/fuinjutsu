@@ -10,13 +10,20 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/lib/pq"
 	"io/ioutil"
+	"log"
 	"os"
 )
 
 func getDb() *sql.DB {
 	url := os.Getenv("HASHDB")
+	if oei.Verbosity() > 10 {
+		log.Println("URL: " + url)
+	}
 	cs, err := pq.ParseURL(url)
 	oei.ErrorHandler(err)
+	if oei.Verbosity() > 10 {
+		log.Println("Connection string: " + cs)
+	}
 	db, err := sql.Open("postgres", cs)
 	oei.ErrorHandler(err)
 	return db
