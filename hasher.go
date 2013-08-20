@@ -10,10 +10,11 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/lib/pq"
 	"io/ioutil"
+	"os"
 )
 
 func getDb() *sql.DB {
-	url := "postgres://lvqpwploovzuqi:qjTsEegr9Xx7pODFvsuVmAWG1l@ec2-54-221-224-138.compute-1.amazonaws.com:5432/d47n8kgim46830?sslmode=require"
+	url := os.Getenv("HASHDB")
 	cs, err := pq.ParseURL(url)
 	oei.ErrorHandler(err)
 	db, err := sql.Open("postgres", cs)
@@ -42,6 +43,13 @@ func addProperty(db *sql.DB, hash_id int64, t string, p *string) {
 	}
 }
 
+func addTag(db *sql.DB, hash_id int64, t *string) {
+	if *t != "" {
+		_, err := db.Exec(`INSERT INTO tags(hash_id, tag) VALUES($1, $2)`, hash_id, t);
+		oei.ErrorHandler(err)
+	}
+}
+
 func main() {
 	db := getDb()
 	defer db.Close()
@@ -50,6 +58,7 @@ func main() {
 	var comment = flag.String("comment", "", "Comment")
 	var url = flag.String("url", "", "URL")
 	var rating = flag.String("rating", "", "Rating")
+	var tag = flag.String("tag", "", "Tag")
 
 	flag.Parse()
 
@@ -87,4 +96,5 @@ func main() {
 	addAnnotation(db, z, "comment", comment)
 	addAnnotation(db, z, "url", url)
 	addProperty(db, z, "rating", rating)
+	addTag(db, z, tag)
 }

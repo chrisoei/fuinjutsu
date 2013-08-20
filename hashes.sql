@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS annotations;
 DROP TABLE IF EXISTS properties;
+DROP TABLE IF EXISTS tags;
 DROP TABLE IF EXISTS hashes;
 
 CREATE TABLE hashes (
@@ -71,3 +72,9 @@ CREATE TABLE properties (
 
 CREATE UNIQUE INDEX no_duplicate_properties ON properties(hash_id, type);
 
+CREATE TABLE tags (
+  tag TEXT NOT NULL,
+  hash_id INTEGER NOT NULL REFERENCES hashes (id)
+);
+
+CREATE UNIQUE INDEX no_duplicate_tags ON tags(hash_id, tag);
