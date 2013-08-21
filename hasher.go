@@ -30,13 +30,6 @@ func getDb() *sql.DB {
 	return db
 }
 
-func storedData(data []byte) []byte {
-	if len(data) < 256 {
-		return data
-	}
-	return nil
-}
-
 func addAnnotation(db *sql.DB, hash_id int64, t string, a *string) {
 	if *a != "" {
 		_, err := db.Exec(`INSERT INTO annotations(hash_id, type, annotation) VALUES($1, $2, $3)`, hash_id, t, a)
@@ -58,24 +51,22 @@ func addTag(db *sql.DB, hash_id int64, t *string) {
 	}
 }
 
-func hashFile(filename string) (map[string]string, []byte) {
+func hashFile(filename string, save bool) (map[string]string, []byte) {
 	h := multidigest.New()
 	w := h.Writer()
 	f, err := os.Open(filename)
 	defer f.Close()
 	oei.ErrorHandler(err)
 
-	// grab the first 512 bytes
-	data := make([]byte, 512)
-	f.Read(data)
-	// send it to the hash function
-	w.Write(data)
+	if save {
+		data, err := ioutil.ReadFile(filename)
+		oei.ErrorHandler(err)
+		w.Write(data)
+		return h.Result(), data
+	}
 
-	// then copy any remaining bytes in bulk
 	io.Copy(w, f)
-
-	// we grabbed more than 256 bytes above so storedData knows if it needs to truncate it here
-	return h.Result(), storedData(data)
+	return h.Result(), nil
 }
 
 func main() {
@@ -89,6 +80,8 @@ func main() {
 	var rating = flag.String("rating", "", "Rating")
 	var imdb = flag.String("imdb", "", "IMDB")
 	var tag = flag.String("tag", "", "Tag")
+
+	var save = flag.Bool("save", false, "Save file in database")
 
 	flag.Parse()
 
@@ -109,7 +102,7 @@ func main() {
 			}
 		}
 
-		r, data := hashFile(flag.Arg(n))
+		r, data := hashFile(flag.Arg(n), *save)
 
 		if oei.Verbosity() >= 0 {
 			s, err := json.MarshalIndent(r, "", "  ")
@@ -118,7 +111,7 @@ func main() {
 		}
 
 		_, err := db.Exec(`INSERT INTO hashes(bytes, adler32, crc32, md5, ripemd160, sha1, "sha2-256", "sha2-512", "sha3-256", ssdeep29, size, version) SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 WHERE NOT EXISTS (SELECT "sha2-256", "sha3-256" FROM hashes where "sha2-256" = $7 AND "sha3-256" = $9)`,
-			storedData(data), // 1
+			data, // 1
 			r["adler32"],     // 2
 			r["crc32"],       // 3
 			r["md5"],         // 4
