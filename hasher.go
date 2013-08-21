@@ -57,6 +57,15 @@ func addTag(db *sql.DB, hash_id int64, t *string) {
 	}
 }
 
+func hashFile(filename string) (map[string]string, []byte) {
+	h := multidigest.New()
+	w := h.Writer()
+	data, err := ioutil.ReadFile(filename)
+	oei.ErrorHandler(err)
+	w.Write(data)
+	return h.Result(), data
+}
+
 func main() {
 	db := getDb()
 	defer db.Close()
@@ -88,19 +97,15 @@ func main() {
 			}
 		}
 
-		h := multidigest.New()
-		w := h.Writer()
-		data, err := ioutil.ReadFile(flag.Arg(n))
-		oei.ErrorHandler(err)
-		w.Write(data)
-		r := h.Result()
+		r, data := hashFile(flag.Arg(n))
+
 		if oei.Verbosity() >= 0 {
 			s, err := json.MarshalIndent(r, "", "  ")
 			oei.ErrorHandler(err)
 			fmt.Printf("%s\n", string(s))
 		}
 
-		_, err = db.Exec(`INSERT INTO hashes(bytes, adler32, crc32, md5, ripemd160, sha1, "sha2-256", "sha2-512", "sha3-256", ssdeep29, size, version) SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 WHERE NOT EXISTS (SELECT "sha2-256", "sha3-256" FROM hashes where "sha2-256" = $7 AND "sha3-256" = $9)`,
+		_, err := db.Exec(`INSERT INTO hashes(bytes, adler32, crc32, md5, ripemd160, sha1, "sha2-256", "sha2-512", "sha3-256", ssdeep29, size, version) SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 WHERE NOT EXISTS (SELECT "sha2-256", "sha3-256" FROM hashes where "sha2-256" = $7 AND "sha3-256" = $9)`,
 			storedData(data), // 1
 			r["adler32"],     // 2
 			r["crc32"],       // 3
