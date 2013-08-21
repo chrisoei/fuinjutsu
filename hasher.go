@@ -9,6 +9,7 @@ import (
 	"github.com/chrisoei/oei"
 	_ "github.com/lib/pq"
 	"github.com/lib/pq"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -60,10 +61,21 @@ func addTag(db *sql.DB, hash_id int64, t *string) {
 func hashFile(filename string) (map[string]string, []byte) {
 	h := multidigest.New()
 	w := h.Writer()
-	data, err := ioutil.ReadFile(filename)
+	f, err := os.Open(filename)
+	defer f.Close()
 	oei.ErrorHandler(err)
+
+	// grab the first 512 bytes
+	data := make([]byte, 512)
+	f.Read(data)
+	// send it to the hash function
 	w.Write(data)
-	return h.Result(), data
+
+	// then copy any remaining bytes in bulk
+	io.Copy(w, f)
+
+	// we grabbed more than 256 bytes above so storedData knows if it needs to truncate it here
+	return h.Result(), storedData(data)
 }
 
 func main() {
