@@ -63,6 +63,11 @@ CREATE TABLE annotations (
   hash_id INTEGER NOT NULL REFERENCES hashes (id)
 );
 
+CREATE INDEX ON annotations(id);
+CREATE INDEX ON annotations(annotation);
+CREATE INDEX ON annotations(timestamp);
+CREATE INDEX ON annotations(hash_id);
+
 CREATE TABLE properties (
   id SERIAL,
   type TEXT,
@@ -72,9 +77,14 @@ CREATE TABLE properties (
 
 CREATE UNIQUE INDEX no_duplicate_properties ON properties(hash_id, type);
 
+CREATE INDEX ON properties(id);
+CREATE INDEX ON properties(hash_id);
+
 CREATE TABLE tags (
   tag TEXT NOT NULL,
   hash_id INTEGER NOT NULL REFERENCES hashes (id)
 );
 
 CREATE UNIQUE INDEX no_duplicate_tags ON tags(hash_id, tag);
+
+CREATE INDEX ON tags(hash_id);
