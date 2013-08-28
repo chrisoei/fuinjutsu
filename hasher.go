@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/AlekSi/xattr"
 	"github.com/chrisoei/multidigest"
 	"github.com/chrisoei/oei"
 	_ "github.com/lib/pq"
@@ -82,6 +83,7 @@ func main() {
 	var tag = flag.String("tag", "", "Tag")
 
 	var save = flag.Bool("save", false, "Save file in database")
+	var useXattr = flag.Bool("xattr", false, "Save hash ID in extended attributes")
 
 	flag.Parse()
 
@@ -111,25 +113,29 @@ func main() {
 		}
 
 		_, err := db.Exec(`INSERT INTO hashes(bytes, adler32, crc32, md5, ripemd160, sha1, "sha2-256", "sha2-512", "sha3-256", ssdeep29, size, version) SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 WHERE NOT EXISTS (SELECT "sha2-256", "sha3-256" FROM hashes where "sha2-256" = $7 AND "sha3-256" = $9)`,
-			data, // 1
-			r["adler32"],     // 2
-			r["crc32"],       // 3
-			r["md5"],         // 4
-			r["ripemd160"],   // 5
-			r["sha1"],        // 6
-			r["sha2-256"],    // 7
-			r["sha2-512"],    // 8
-			r["sha3-256"],    // 9
-			r["ssdeep29"],    // 10
-			r["size"],        // 11
-			r["version"])     // 12
+			data,           // 1
+			r["adler32"],   // 2
+			r["crc32"],     // 3
+			r["md5"],       // 4
+			r["ripemd160"], // 5
+			r["sha1"],      // 6
+			r["sha2-256"],  // 7
+			r["sha2-512"],  // 8
+			r["sha3-256"],  // 9
+			r["ssdeep29"],  // 10
+			r["size"],      // 11
+			r["version"])   // 12
 		oei.ErrorHandler(err)
 
 		row := db.QueryRow(`SELECT id FROM hashes WHERE "sha2-256" = $1 AND "sha3-256" = $2`, r["sha2-256"], r["sha3-256"])
 		var z int64
 		row.Scan(&z)
+		hid := fmt.Sprintf("%d", z)
+		if *useXattr {
+			oei.ErrorHandler(xattr.Set(flag.Arg(n), "user.io.oei.hash_id", []byte(hid)))
+		}
 		if oei.Verbosity() >= 0 {
-			fmt.Printf("%d\n", z)
+			fmt.Println(hid)
 		}
 
 		addAnnotation(db, z, "filename", &fn)
