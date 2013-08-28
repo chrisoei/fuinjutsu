@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/AlekSi/xattr"
+	"github.com/chrisoei/xattr"
 	"github.com/chrisoei/multidigest"
 	"github.com/chrisoei/oei"
 	_ "github.com/lib/pq"
