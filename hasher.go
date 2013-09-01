@@ -5,15 +5,17 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/chrisoei/xattr"
 	"github.com/chrisoei/multidigest"
 	"github.com/chrisoei/oei"
-	_ "github.com/lib/pq"
+	"github.com/chrisoei/xattr"
 	"github.com/lib/pq"
+	_ "github.com/lib/pq"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
+	"regexp"
 )
 
 func getDb() *sql.DB {
@@ -70,6 +72,14 @@ func hashFile(filename string, save bool) (map[string]string, []byte) {
 	return h.Result(), nil
 }
 
+func hashName(filename string, hash_id int64) string {
+	r := regexp.MustCompile("\\[#\\d+\\]\\.\\w+")
+	if r.Match([]byte(filename)) {
+		return filename
+	}
+	return fmt.Sprintf("%s_[#%d]%s", oei.FilenameWithoutExt(filename), hash_id, filepath.Ext(filename))
+}
+
 func main() {
 	db := getDb()
 	defer db.Close()
@@ -84,27 +94,15 @@ func main() {
 
 	var save = flag.Bool("save", false, "Save file in database")
 	var useXattr = flag.Bool("xattr", false, "Save hash ID in extended attributes")
+	var rename = flag.Bool("rename", false, "Rename the file using the hash ID as part of the filename")
 
 	flag.Parse()
 
 	for n := range flag.Args() {
 
-		switch *fnOverride {
-		case "*":
-			{
-				fn = flag.Arg(n)
-			}
-		case "":
-			{
-				fn = ""
-			}
-		default:
-			{
-				fn = *fnOverride
-			}
-		}
+		filename := flag.Arg(n)
 
-		r, data := hashFile(flag.Arg(n), *save)
+		r, data := hashFile(filename, *save)
 
 		if oei.Verbosity() >= 0 {
 			s, err := json.MarshalIndent(r, "", "  ")
@@ -132,10 +130,32 @@ func main() {
 		row.Scan(&z)
 		hid := fmt.Sprintf("%d", z)
 		if *useXattr {
-			oei.ErrorHandler(xattr.Set(flag.Arg(n), "user.io.oei.hash_id", []byte(hid)))
+			oei.ErrorHandler(xattr.Set(filename, "user.io.oei.hash_id", []byte(hid)))
 		}
 		if oei.Verbosity() >= 0 {
 			fmt.Println(hid)
+		}
+		if *rename {
+			newFilename := hashName(filename, z)
+			if newFilename != filename {
+				os.Rename(filename, newFilename)
+				filename = newFilename
+			}
+		}
+
+		switch *fnOverride {
+		case "*":
+			{
+				fn = filename
+			}
+		case "":
+			{
+				fn = ""
+			}
+		default:
+			{
+				fn = *fnOverride
+			}
 		}
 
 		addAnnotation(db, z, "filename", &fn)
