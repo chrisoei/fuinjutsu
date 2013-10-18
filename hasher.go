@@ -54,6 +54,13 @@ func addTag(db *sql.DB, hash_id int64, t *string) {
 	}
 }
 
+func addContents(db *sql.DB, hash_id int64, t []byte) {
+	if len(t) > 0 {
+		_, err := db.Exec(`INSERT INTO contents(hash_id, bytes) VALUES($1, $2)`, hash_id, t)
+		oei.ErrorHandler(err)
+	}
+}
+
 func hashFile(filename string, save bool) (map[string]string, []byte) {
 	h := multidigest.New()
 	w := h.Writer()
@@ -110,19 +117,18 @@ func main() {
 			fmt.Printf("%s\n", string(s))
 		}
 
-		_, err := db.Exec(`INSERT INTO hashes(bytes, adler32, crc32, md5, ripemd160, sha1, "sha2-256", "sha2-512", "sha3-256", ssdeep29, size, version) SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 WHERE NOT EXISTS (SELECT "sha2-256", "sha3-256" FROM hashes where "sha2-256" = $7 AND "sha3-256" = $9)`,
-			data,           // 1
-			r["adler32"],   // 2
-			r["crc32"],     // 3
-			r["md5"],       // 4
-			r["ripemd160"], // 5
-			r["sha1"],      // 6
-			r["sha2-256"],  // 7
-			r["sha2-512"],  // 8
-			r["sha3-256"],  // 9
-			r["ssdeep29"],  // 10
-			r["size"],      // 11
-			r["version"])   // 12
+		_, err := db.Exec(`INSERT INTO hashes(adler32, crc32, md5, ripemd160, sha1, "sha2-256", "sha2-512", "sha3-256", ssdeep29, size, version) SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11 WHERE NOT EXISTS (SELECT "sha2-256", "sha3-256" FROM hashes where "sha2-256" = $6 AND "sha3-256" = $8)`,
+			r["adler32"],   // 1
+			r["crc32"],     // 2
+			r["md5"],       // 3
+			r["ripemd160"], // 4
+			r["sha1"],      // 5
+			r["sha2-256"],  // 6
+			r["sha2-512"],  // 7
+			r["sha3-256"],  // 8
+			r["ssdeep29"],  // 9
+			r["size"],      // 10
+			r["version"])   // 11
 		oei.ErrorHandler(err)
 
 		row := db.QueryRow(`SELECT id FROM hashes WHERE "sha2-256" = $1 AND "sha3-256" = $2`, r["sha2-256"], r["sha3-256"])
@@ -164,5 +170,6 @@ func main() {
 		addProperty(db, z, "rating", rating)
 		addProperty(db, z, "imdb", imdb)
 		addTag(db, z, tag)
+		addContents(db, z, data)
 	}
 }
