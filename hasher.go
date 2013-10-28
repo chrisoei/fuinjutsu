@@ -131,7 +131,7 @@ func main() {
 
 		r, data := hashFile(filename, *save)
 
-		if oei.Verbosity() >= 0 {
+		if oei.Verbosity() > 0 {
 			s, err := json.MarshalIndent(r, "", "  ")
 			oei.ErrorHandler(err)
 			fmt.Printf("%s\n", string(s))
