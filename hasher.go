@@ -115,6 +115,7 @@ func main() {
 	var comment = flag.String("comment", "", "Comment")
 	var url = flag.String("url", "", "URL")
 	var rating = flag.String("rating", "", "Rating")
+	var src = flag.String("src", "", "Source")
 	var imdb = flag.String("imdb", "", "IMDB")
 	var tag = flag.String("tag", "", "Tag")
 
@@ -203,6 +204,7 @@ func main() {
 			addAnnotation(db, z, "comment", comment)
 			addAnnotation(db, z, "url", url)
 			addProperty(db, z, "rating", rating)
+			addProperty(db, z, "src", src)
 			addProperty(db, z, "imdb", imdb)
 			addTag(db, z, tag)
 			addContents(db, z, data)
