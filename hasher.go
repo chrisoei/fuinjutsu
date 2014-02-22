@@ -117,6 +117,7 @@ func main() {
 	var rating = flag.String("rating", "", "Rating")
 	var src = flag.String("src", "", "Source")
 	var imdb = flag.String("imdb", "", "IMDB")
+	var contentType = flag.String("content-type", "", "Content type")
 	var tag = flag.String("tag", "", "Tag")
 
 	var save = flag.Bool("save", false, "Save file in database")
@@ -206,6 +207,7 @@ func main() {
 			addProperty(db, z, "rating", rating)
 			addProperty(db, z, "src", src)
 			addProperty(db, z, "imdb", imdb)
+			addProperty(db, z, "content-type", contentType)
 			addTag(db, z, tag)
 			addContents(db, z, data)
 		}
